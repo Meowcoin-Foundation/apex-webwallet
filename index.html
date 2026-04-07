@@ -12,8 +12,10 @@
       3. script-src restricts to cdn.jsdelivr.net only
     The release pipeline can compute a sha256 hash of the inline module script
     and replace 'unsafe-inline' with 'sha256-{hash}' for production builds.
+    Note: must use https://cdn.jsdelivr.net (with scheme) so the CSP works
+    when the file is opened directly via file:// as well as from a web server.
   -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src cdn.jsdelivr.net 'unsafe-inline'; connect-src https:; style-src 'unsafe-inline'; img-src data: blob:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src https://cdn.jsdelivr.net 'unsafe-inline'; connect-src https:; style-src 'unsafe-inline'; img-src data: blob:;">
   <title>Apex Wallet — Meowcoin</title>
   <style>
     :root {
