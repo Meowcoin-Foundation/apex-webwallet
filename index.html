@@ -819,9 +819,9 @@
         </div>
       </div>
       <div class="field-group">
-        <label for="fee-rate">fee rate (mewc/vB)</label>
-        <input type="number" id="fee-rate" value="1000" min="1000" step="100">
-        <p class="hint">Minimum 1000 mewc/vB — legacy Meowcoin nodes require ≥0.01 MEWC/kvB to relay transactions</p>
+        <label for="fee-rate">fee rate (MEWC/kB)</label>
+        <input type="number" id="fee-rate" value="0.011" min="0.011" step="0.001">
+        <p class="hint">Minimum 0.011 MEWC/kB — required for legacy network propagation</p>
       </div>
       <p class="fee-estimate" id="fee-estimate"></p>
       <div class="error-box hidden" id="send-error"></div>
@@ -3232,7 +3232,8 @@ function buildSignedTx(utxos, toAddress, amountSats, changeAddress, feeRate) {
 
   // Estimate fee (always assume 2 outputs for fee calc per spec)
   const numInputs = utxos.length;
-  const estimatedFee = (numInputs * 148 + 2 * 34 + 10) * feeRate;
+  // feeRate in MEWC/kB
+  const estimatedFee = Math.round(((numInputs * 148 + 2 * 34 + 10) / 1000) * feeRate * 1e8);
 
   if (amountSats + estimatedFee > totalIn)
     throw new Error('Insufficient funds (including fee)');
@@ -3249,7 +3250,7 @@ function buildSignedTx(utxos, toAddress, amountSats, changeAddress, feeRate) {
     outputs.push({ value: change, script: buildP2PKHScript(changeHash160) });
   } else {
     // Change below dust goes to miner; recalc fee with 1 output
-    const singleFee = (numInputs * 148 + 34 + 10) * feeRate;
+    const singleFee = Math.round(((numInputs * 148 + 34 + 10) / 1000) * feeRate * 1e8);
     fee = singleFee;
     change = 0;
     if (amountSats + singleFee > totalIn)
@@ -3275,7 +3276,9 @@ function buildSignedTx(utxos, toAddress, amountSats, changeAddress, feeRate) {
 }
 
 function estimateFee(numInputs, feeRate) {
-  return (numInputs * 148 + 2 * 34 + 10) * feeRate;
+  // feeRate in MEWC/kB; convert to satoshis
+  const bytes = numInputs * 148 + 2 * 34 + 10;
+  return Math.round((bytes / 1000) * feeRate * 1e8);
 }
 
 // ── API helpers ──────────────────────────────────────────────────────────────
@@ -3413,11 +3416,11 @@ function renderBalance() {
 }
 
 function updateFeeEstimate() {
-  const feeRate  = parseInt(document.getElementById('fee-rate').value) || 1000;
+  const feeRate  = parseFloat(document.getElementById('fee-rate').value) || 0.011;
   const numInput = Math.max(state.utxos.length, 1);
   const feeSats  = estimateFee(numInput, feeRate);
   document.getElementById('fee-estimate').textContent =
-    `Estimated fee: ${satsToMEWC(feeSats)} MEWC (${feeSats} mewc)`;
+    `Estimated fee: ${satsToMEWC(feeSats)} MEWC (${feeSats} Mew)`;
 }
 
 async function updateServerIndicator() {
@@ -3501,7 +3504,7 @@ function lockWallet() {
 
   // Reset send form
   ['send-to', 'send-amount'].forEach(id => { document.getElementById(id).value = ''; });
-  document.getElementById('fee-rate').value = '1000';
+  document.getElementById('fee-rate').value = '0.011';
   document.getElementById('tx-preview').classList.add('hidden');
   document.getElementById('tx-success').classList.add('hidden');
   hideError('send-error');
@@ -3652,7 +3655,7 @@ document.getElementById('btn-send-max').addEventListener('click', () => {
     showToast('No UTXOs available. Refresh balance first.', 'error');
     return;
   }
-  const feeRate  = parseInt(document.getElementById('fee-rate').value) || 1000;
+  const feeRate  = parseFloat(document.getElementById('fee-rate').value) || 0.011;
   const totalIn  = state.utxos.reduce((s, u) => s + u.value, 0);
   const fee      = estimateFee(state.utxos.length, feeRate);
   const maxSats  = Math.max(0, totalIn - fee);
@@ -3667,12 +3670,12 @@ document.getElementById('btn-build-tx').addEventListener('click', () => {
 
   const toAddr   = document.getElementById('send-to').value.trim();
   const amtStr   = document.getElementById('send-amount').value;
-  const feeRate  = parseInt(document.getElementById('fee-rate').value) || 1000;
+  const feeRate  = parseFloat(document.getElementById('fee-rate').value) || 0.011;
 
   if (!toAddr)         return showError('send-error', 'Enter a recipient address.');
   if (!amtStr || isNaN(parseFloat(amtStr)) || parseFloat(amtStr) <= 0)
     return showError('send-error', 'Enter a valid amount.');
-  if (feeRate < 1000)  return showError('send-error', 'Fee rate must be at least 1000 mewc/vB — legacy Meowcoin nodes require ≥0.01 MEWC/kvB to relay.');
+  if (feeRate < 0.011) return showError('send-error', 'Fee rate must be at least 0.011 MEWC/kB — required for legacy network propagation.');
   if (!state.utxos.length)
     return showError('send-error', 'No UTXOs available. Refresh balance first.');
 
@@ -3687,7 +3690,7 @@ document.getElementById('btn-build-tx').addEventListener('click', () => {
     document.getElementById('preview-to').textContent     = toAddr;
     document.getElementById('preview-amount').textContent = `${satsToMEWC(amtSats)} MEWC`;
     document.getElementById('preview-fee').textContent    =
-      `${satsToMEWC(result.fee)} MEWC (${result.fee} mewc @ ${feeRate} mewc/vB)`;
+      `${satsToMEWC(result.fee)} MEWC (${result.fee} Mew @ ${feeRate} MEWC/kB)`;
     document.getElementById('preview-change').textContent = hasChange
       ? `${satsToMEWC(result.change)} MEWC` : '—';
     document.getElementById('preview-change-row').style.display = hasChange ? '' : 'none';
