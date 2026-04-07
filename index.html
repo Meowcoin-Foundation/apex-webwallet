@@ -1,0 +1,1781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!--
+    Content-Security-Policy note:
+    The +esm endpoint on jsDelivr generates bundles dynamically and explicitly
+    states SRI hashes cannot be used with it. The security boundary here is:
+      1. Exact semver pinning of all CDN dependencies
+      2. GPG signature on the release artifact covers the whole file
+      3. script-src restricts to cdn.jsdelivr.net only
+    The release pipeline can compute a sha256 hash of the inline module script
+    and replace 'unsafe-inline' with 'sha256-{hash}' for production builds.
+  -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src cdn.jsdelivr.net 'unsafe-inline'; connect-src https:; style-src 'unsafe-inline'; img-src data: blob:;">
+  <title>Apex Wallet — Meowcoin</title>
+  <style>
+    :root {
+      --bg:           #0d0d0d;
+      --surface:      #161616;
+      --card:         #1c1c1c;
+      --card2:        #242424;
+      --border:       #2e2e2e;
+      --border2:      #3a3a3a;
+      --accent:       #bc8500;
+      --accent-dim:   #7a5800;
+      --accent-glow:  rgba(188,133,0,0.18);
+      --text:         #f0eeeb;
+      --muted:        #888888;
+      --muted2:       #5a5a5a;
+      --success:      #22c55e;
+      --success-bg:   #0a2010;
+      --error:        #ef4444;
+      --error-bg:     #200a0a;
+      --warn-bg:      #1a1000;
+      --warn-border:  #7a5500;
+      --radius:       12px;
+      --radius-sm:    8px;
+      --radius-xs:    5px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100%;
+      padding: 16px 16px 32px;
+    }
+
+    /* ── Screens ── */
+    .screen { display: none; width: 100%; max-width: 480px; }
+    .screen.active { display: block; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 12px;
+    }
+    .card:last-child { margin-bottom: 0; }
+
+    /* ── Logo area ── */
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 6px;
+    }
+    .mewc-icon { flex-shrink: 0; width: 44px; height: 44px; }
+    .wordmark { display: flex; flex-direction: column; }
+    .wallet-name {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.3px;
+      line-height: 1.2;
+    }
+    .coin-name {
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .tagline {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 22px;
+    }
+
+    /* ── Section divider ── */
+    .section-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 20px 0;
+    }
+
+    /* ── Field groups ── */
+    .field-group { margin-bottom: 16px; }
+    .field-group:last-child { margin-bottom: 0; }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    input[type="url"],
+    input[type="number"],
+    textarea {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      padding: 10px 12px;
+      outline: none;
+      transition: border-color 0.15s;
+      -webkit-appearance: none;
+    }
+    input[type="text"]:focus,
+    input[type="url"]:focus,
+    input[type="number"]:focus,
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    input::placeholder, textarea::placeholder { color: var(--muted2); }
+
+    textarea { resize: vertical; min-height: 72px; font-family: monospace; font-size: 13px; }
+
+    .hint {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 5px;
+    }
+
+    .word-count {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 5px;
+    }
+    .word-count.valid { color: var(--success); }
+    .word-count.invalid { color: var(--error); }
+
+    /* ── Input with button ── */
+    .input-with-btn {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+    .input-with-btn input { flex: 1; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px 18px;
+      cursor: pointer;
+      border: none;
+      outline: none;
+      transition: background 0.12s, opacity 0.12s, box-shadow 0.12s;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+      width: 100%;
+      padding: 12px;
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: #d49800;
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    .btn-secondary {
+      background: var(--card2);
+      color: var(--text);
+      border: 1px solid var(--border2);
+      width: 100%;
+      padding: 11px;
+    }
+    .btn-secondary:hover:not(:disabled) { background: var(--border); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      padding: 6px 10px;
+      font-size: 13px;
+    }
+    .btn-ghost:hover { color: var(--text); background: var(--card2); }
+
+    .btn-sm { padding: 8px 12px; font-size: 13px; width: auto; }
+
+    .btn-danger {
+      background: var(--error-bg);
+      color: var(--error);
+      border: 1px solid #4a1010;
+      width: 100%;
+      padding: 11px;
+    }
+    .btn-danger:hover:not(:disabled) { background: #2d0a0a; }
+
+    /* Loading spinner text */
+    .btn.loading { opacity: 0.7; pointer-events: none; }
+    .btn.loading::after { content: '…'; }
+
+    /* ── Divider with text ── */
+    .divider-line {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 18px 0;
+      color: var(--muted2);
+      font-size: 12px;
+    }
+    .divider-line::before,
+    .divider-line::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Tab bar ── */
+    .tab-bar {
+      display: flex;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 3px;
+      margin-bottom: 16px;
+    }
+    .tab-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 7px;
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s;
+    }
+    .tab-btn.active {
+      background: var(--card);
+      color: var(--text);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+    .tab-btn:hover:not(.active) { color: var(--text); }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ── Security notice ── */
+    .security-notice {
+      background: var(--warn-bg);
+      border: 1px solid var(--warn-border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      font-size: 12px;
+      color: #c8a84a;
+      line-height: 1.6;
+      margin-top: 20px;
+    }
+
+    /* ── Warning / error / success boxes ── */
+    .warn-box {
+      background: var(--warn-bg);
+      border: 1px solid var(--warn-border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      font-size: 13px;
+      color: #c8a84a;
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+    .error-box {
+      background: var(--error-bg);
+      border: 1px solid #4a1010;
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      font-size: 13px;
+      color: var(--error);
+      margin-bottom: 14px;
+    }
+    .success-box {
+      background: var(--success-bg);
+      border: 1px solid #0f3a1f;
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      font-size: 13px;
+      color: var(--success);
+    }
+
+    /* ── Seed word grid ── */
+    .words-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .word-cell {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xs);
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .word-num {
+      font-size: 11px;
+      color: var(--muted2);
+      min-width: 16px;
+      font-weight: 600;
+    }
+    .word-text {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    /* ── Checkbox ── */
+    .checkbox-label {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text);
+      margin-bottom: 18px;
+    }
+    .checkbox-label input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      margin-top: 2px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    /* ── Wallet header ── */
+    .wallet-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+      margin-bottom: 4px;
+      width: 100%;
+      max-width: 480px;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .header-title {
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--accent);
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* ── Server indicator ── */
+    .server-indicator {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .server-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--muted2);
+      flex-shrink: 0;
+    }
+    .server-dot.green { background: var(--success); box-shadow: 0 0 5px rgba(34,197,94,0.5); }
+    .server-dot.red   { background: var(--error); }
+    .server-label {
+      font-size: 12px;
+      color: var(--muted);
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ── Balance card ── */
+    .balance-card { text-align: center; }
+    .balance-amount {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .balance-amount .unit { font-size: 18px; color: var(--muted); }
+    .balance-unconfirmed {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+    .address-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 14px;
+    }
+    .address-mono {
+      font-family: monospace;
+      font-size: 13px;
+      color: var(--muted);
+      cursor: default;
+    }
+    .icon-btn {
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xs);
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 15px;
+      padding: 4px 8px;
+      line-height: 1;
+      transition: color 0.12s, background 0.12s;
+    }
+    .icon-btn:hover { color: var(--text); background: var(--border); }
+
+    /* ── Fee estimate ── */
+    .fee-estimate {
+      font-size: 12px;
+      color: var(--muted);
+      margin: 6px 0 14px;
+      min-height: 18px;
+    }
+
+    /* ── Transaction preview ── */
+    .tx-preview h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 14px;
+    }
+    .tx-summary { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; margin-bottom: 16px; }
+    .tx-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      gap: 8px;
+    }
+    .tx-row:last-child { border-bottom: none; }
+    .tx-row span:first-child { color: var(--muted); flex-shrink: 0; }
+    .tx-row span:last-child { font-family: monospace; text-align: right; word-break: break-all; }
+    .tx-row.total span { font-weight: 700; color: var(--text); }
+    .tx-row .mono { font-family: monospace; font-size: 12px; }
+
+    /* ── Broadcast success ── */
+    .tx-success { margin-top: 14px; }
+    .success-text {
+      font-weight: 700;
+      color: var(--success);
+      font-size: 15px;
+      margin-bottom: 10px;
+    }
+    .txid-display {
+      font-size: 12px;
+      color: var(--muted);
+      word-break: break-all;
+      margin-bottom: 14px;
+      background: var(--surface);
+      padding: 10px 12px;
+      border-radius: var(--radius-xs);
+      border: 1px solid var(--border);
+    }
+    .txid-display a { color: var(--accent); text-decoration: none; font-family: monospace; }
+    .txid-display a:hover { text-decoration: underline; }
+
+    /* ── Receive tab ── */
+    .receive-address-display {
+      font-family: monospace;
+      font-size: 13px;
+      color: var(--text);
+      word-break: break-all;
+      padding: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 16px;
+      text-align: center;
+      user-select: all;
+      cursor: text;
+    }
+    .qr-container {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 16px;
+      padding: 12px;
+      background: #fff;
+      border-radius: var(--radius-sm);
+    }
+    #qr-canvas { display: block; }
+
+    /* ── History ── */
+    .history-list { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      gap: 8px;
+    }
+    .history-item-left { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+    .history-txid {
+      font-family: monospace;
+      font-size: 12px;
+      color: var(--accent);
+      text-decoration: none;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .history-txid:hover { text-decoration: underline; }
+    .history-meta { display: flex; align-items: center; gap: 6px; }
+    .badge {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      padding: 2px 5px;
+      border-radius: 3px;
+    }
+    .badge-confirmed { background: var(--success-bg); color: var(--success); }
+    .badge-unconfirmed { background: var(--warn-bg); color: #c8a84a; }
+    .history-date { font-size: 11px; color: var(--muted); }
+    .history-amount { font-weight: 700; font-size: 13px; white-space: nowrap; }
+    .history-amount.positive { color: var(--success); }
+    .history-amount.negative { color: var(--error); }
+    .history-amount.zero { color: var(--muted); }
+
+    .empty-state {
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+      padding: 24px 0;
+    }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--card2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      padding: 10px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      z-index: 1000;
+      white-space: nowrap;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+    }
+    .toast.success { border-color: #0f3a1f; color: var(--success); }
+    .toast.error   { border-color: #4a1010; color: var(--error); }
+
+    /* ── Generate screen ── */
+    .generate-card h2 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    /* ── Utility ── */
+    .hidden { display: none !important; }
+    .mt-2 { margin-top: 8px; }
+    .mt-3 { margin-top: 12px; }
+    .text-muted { color: var(--muted); font-size: 13px; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--surface); }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════
+     SCREEN 1: LOGIN
+════════════════════════════════════════ -->
+<div id="screen-login" class="screen active">
+  <div class="card" style="margin-top: 24px;">
+
+    <!-- Logo -->
+    <div class="logo-area">
+      <svg class="mewc-icon" viewBox="0 0 108.4 101.7" xmlns="http://www.w3.org/2000/svg" aria-label="Meowcoin logo">
+        <path fill="#FEFFFF" d="M101.7,39.6v-5.5c0-0.3-0.3-0.6-0.6-0.6H80.9c-0.3,0-0.6,0.3-0.6,0.6v5.5c0,0.3-0.3,0.6-0.6,0.6h-5.5c-0.3,0-0.6,0.3-0.6,0.6v5.5c0,0.3-0.3,0.6-0.6,0.6h-4.2c-0.3,0-0.6-0.3-0.6-0.6V0.6C68.2,0.3,68,0,67.7,0H40.8c-0.3,0-0.6,0.3-0.6,0.6v5.5c0,0.3-0.3,0.6-0.6,0.6h-5.5c-0.3,0-0.6,0.3-0.6,0.6v5.5c0,0.3-0.3,0.6-0.6,0.6h-4.2c-0.3,0-0.6-0.3-0.6-0.6V7.3c0-0.3-0.3-0.6-0.6-0.6H22c-0.3,0-0.6-0.3-0.6-0.6V0.6c0-0.3-0.3-0.6-0.6-0.6H0.6C0.3,0,0,0.3,0,0.6V61c0,0.3,0.3,0.6,0.6,0.6h5.5c0.3,0,0.6,0.3,0.6,0.6v5.5c0,0.3,0.3,0.6,0.6,0.6h5.5c0.3,0,0.6,0.3,0.6,0.6v32.3c0,0.3,0.3,0.6,0.6,0.6h73.8c0.3,0,0.6-0.3,0.6-0.6V75.5c0-0.3,0.3-0.6,0.6-0.6h5.5c0.3,0,0.6-0.3,0.6-0.6v-5.5c0-0.3,0.3-0.6,0.6-0.6h5.5c0.3,0,0.6-0.3,0.6-0.6v-5.5c0-0.3,0.3-0.6,0.6-0.6h5.5c0.3,0,0.6-0.3,0.6-0.6V40.8c0-0.3-0.3-0.6-0.6-0.6h-5.5C101.9,40.2,101.7,39.9,101.7,39.6z"/>
+        <rect x="24.1" y="50.8" fill="#FF997D" width="6.7" height="6.7"/>
+        <polygon fill="#5B5F6E" points="17.4,24.1 17.4,30.8 24.1,30.8 24.1,24.1 24.1,17.4 17.4,17.4"/>
+        <rect x="30.8" y="24.1" fill="#5B5F6E" width="6.7" height="6.7"/>
+        <rect x="37.5" y="17.4" fill="#5B5F6E" width="6.7" height="6.7"/>
+        <polygon fill="#342704" points="17.4,44.2 17.4,50.8 24.1,50.8 24.1,44.2 24.1,37.5 17.4,37.5"/>
+        <polygon fill="#342704" points="37.5,37.5 37.5,44.2 37.5,50.8 44.2,50.8 44.2,44.2 44.2,37.5"/>
+        <polygon fill="#F2CEAC" points="10.7,17.4 10.7,24.1 17.4,24.1 17.4,17.4 17.4,10.7 10.7,10.7"/>
+        <polygon fill="#F2CEAC" points="50.8,10.7 44.2,10.7 44.2,17.4 44.2,24.1 50.8,24.1 57.5,24.1 57.5,17.4 57.5,10.7"/>
+        <polygon fill="#FEFFFF" points="70.9,70.9 70.9,64.2 64.2,64.2 57.5,64.2 50.8,64.2 50.8,57.5 57.5,57.5 57.5,50.8 50.8,50.8 44.2,50.8 37.5,50.8 37.5,44.2 30.8,44.2 30.8,37.5 30.8,30.8 30.8,24.1 24.1,24.1 24.1,30.8 17.4,30.8 17.4,37.5 24.1,37.5 24.1,44.2 24.1,50.8 30.8,50.8 30.8,57.5 24.1,57.5 24.1,50.8 17.4,50.8 17.4,44.2 17.4,37.5 10.7,37.5 10.7,44.2 10.7,50.8 10.7,57.5 17.4,57.5 17.4,64.2 24.1,64.2 24.1,70.9 24.1,77.6 24.1,84.3 24.1,91 30.8,91 30.8,84.3 30.8,77.6 37.5,77.6 37.5,84.3 37.5,91 44.2,91 44.2,84.3 44.2,77.6 50.8,77.6 50.8,84.3 57.5,84.3 64.2,84.3 64.2,77.6 70.9,77.6 70.9,84.3 70.9,91 77.6,91 77.6,84.3 77.6,77.6 77.6,70.9"/>
+        <polygon fill="#BC8500" points="10.7,30.8 10.7,37.5 17.4,37.5 17.4,30.8 17.4,24.1 10.7,24.1"/>
+        <polygon fill="#BC8500" points="57.5,44.2 57.5,37.5 57.5,30.8 57.5,24.1 50.8,24.1 44.2,24.1 37.5,24.1 37.5,30.8 30.8,30.8 30.8,37.5 30.8,44.2 37.5,44.2 37.5,37.5 44.2,37.5 44.2,44.2 44.2,50.8 50.8,50.8 57.5,50.8"/>
+        <polygon fill="#BC8500" points="64.2,57.5 57.5,57.5 57.5,64.2 64.2,64.2 70.9,64.2 70.9,57.5"/>
+        <rect x="70.9" y="64.2" fill="#BC8500" width="6.7" height="6.7"/>
+        <polygon fill="#BC8500" points="91,44.2 84.3,44.2 84.3,50.8 84.3,57.5 77.6,57.5 77.6,64.2 84.3,64.2 91,64.2 91,57.5 91,50.8 97.7,50.8 97.7,44.2"/>
+        <rect x="17.4" y="10.7" width="6.7" height="6.7"/>
+        <rect x="10.7" y="57.5" width="6.7" height="6.7"/>
+        <polygon points="10.7,44.2 10.7,37.5 10.7,30.8 10.7,24.1 10.7,17.4 10.7,10.7 17.4,10.7 17.4,4 10.7,4 4,4 4,10.7 4,17.4 4,24.1 4,30.8 4,37.5 4,44.2 4,50.8 4,57.5 10.7,57.5 10.7,50.8"/>
+        <polygon points="30.8,24.1 37.5,24.1 37.5,17.4 30.8,17.4 24.1,17.4 24.1,24.1"/>
+        <rect x="37.5" y="10.7" width="6.7" height="6.7"/>
+        <polygon points="57.5,10.7 57.5,17.4 57.5,24.1 57.5,30.8 57.5,37.5 57.5,44.2 57.5,50.8 57.5,57.5 64.2,57.5 70.9,57.5 70.9,50.8 64.2,50.8 64.2,44.2 64.2,37.5 64.2,30.8 64.2,24.1 64.2,17.4 64.2,10.7 64.2,4 57.5,4 50.8,4 44.2,4 44.2,10.7 50.8,10.7"/>
+        <rect x="50.8" y="57.5" width="6.7" height="6.7"/>
+        <rect x="70.9" y="57.5" width="6.7" height="6.7"/>
+        <polygon points="84.3,50.8 84.3,44.2 77.6,44.2 77.6,50.8 77.6,57.5 84.3,57.5"/>
+        <polygon points="77.6,64.2 77.6,70.9 77.6,77.6 77.6,84.3 77.6,91 70.9,91 70.9,84.3 70.9,77.6 64.2,77.6 64.2,84.3 57.5,84.3 50.8,84.3 50.8,77.6 44.2,77.6 44.2,84.3 44.2,91 37.5,91 37.5,84.3 37.5,77.6 30.8,77.6 30.8,84.3 30.8,91 24.1,91 24.1,84.3 24.1,77.6 24.1,70.9 24.1,64.2 17.4,64.2 17.4,70.9 17.4,77.6 17.4,84.3 17.4,91 17.4,97.7 24.1,97.7 30.8,97.7 37.5,97.7 44.2,97.7 50.8,97.7 50.8,91 57.5,91 57.5,97.7 64.2,97.7 70.9,97.7 77.6,97.7 84.3,97.7 84.3,91 84.3,84.3 84.3,77.6 84.3,70.9 91,70.9 91,64.2 84.3,64.2"/>
+        <polygon points="97.7,44.2 97.7,37.5 91,37.5 84.3,37.5 84.3,44.2 91,44.2"/>
+        <polygon points="97.7,44.2 97.7,50.8 91,50.8 91,57.5 91,64.2 97.7,64.2 97.7,57.5 104.4,57.5 104.4,50.8 104.4,44.2"/>
+      </svg>
+      <div class="wordmark">
+        <span class="wallet-name">Apex Wallet</span>
+        <span class="coin-name">Meowcoin</span>
+      </div>
+    </div>
+    <p class="tagline">your keys, your coins — nothing is ever stored</p>
+
+    <!-- Server config -->
+    <div class="field-group">
+      <label for="server-url">electrs server</label>
+      <input type="url" id="server-url" value="https://electrs.mewccrypto.com"
+             autocomplete="off" spellcheck="false">
+      <p class="hint">your wallet connects directly to this server — no middleman</p>
+    </div>
+
+    <hr class="section-divider">
+
+    <!-- Login tabs -->
+    <div class="tab-bar">
+      <button class="tab-btn active" id="login-tab-bip39" onclick="switchLoginTab('bip39')">BIP39</button>
+      <button class="tab-btn" id="login-tab-privkey" onclick="switchLoginTab('privkey')">Private Key</button>
+    </div>
+
+    <!-- BIP39 tab -->
+    <div id="tab-content-bip39" class="tab-content active">
+      <div class="field-group">
+        <label for="mnemonic-input">seed phrase</label>
+        <textarea id="mnemonic-input" rows="3"
+          autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+          placeholder="enter your 12 or 24 word seed phrase..."></textarea>
+        <p class="word-count" id="word-count">0 words</p>
+      </div>
+
+      <div class="field-group">
+        <label for="derivation-path">derivation path</label>
+        <input type="text" id="derivation-path" value="m/44'/175'/0'/0"
+               autocomplete="off" spellcheck="false">
+        <p class="hint">index 0 by default — change the last number to access other addresses</p>
+      </div>
+
+      <div class="error-box hidden" id="bip39-error"></div>
+      <button class="btn btn-primary" id="btn-open-bip39">Open wallet</button>
+
+      <div class="divider-line">or</div>
+      <button class="btn btn-secondary" id="btn-generate">Generate new wallet</button>
+    </div>
+
+    <!-- Private key tab -->
+    <div id="tab-content-privkey" class="tab-content">
+      <div class="field-group">
+        <label for="privkey-input">private key (WIF)</label>
+        <input type="text" id="privkey-input"
+          autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+          placeholder="WIF format — starts with 5, K, or L">
+        <p class="hint">use this to import from any Meowcoin wallet including legacy Electrum</p>
+      </div>
+
+      <div class="error-box hidden" id="privkey-error"></div>
+      <button class="btn btn-primary" id="btn-open-privkey">Open wallet</button>
+    </div>
+
+    <!-- Security notice -->
+    <div class="security-notice">
+      This wallet does not store your seed phrase, private keys, or any wallet data anywhere.
+      Your session ends when you close this page or click lock. Always keep your seed phrase
+      backed up somewhere safe — there is no recovery option if you lose it.
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     SCREEN 2: SEED GENERATION
+════════════════════════════════════════ -->
+<div id="screen-generate" class="screen">
+  <div class="card generate-card" style="margin-top: 24px;">
+    <h2>New Seed Phrase</h2>
+    <div class="warn-box">
+      ⚠ Write these words down in order on paper. Do not screenshot or store digitally
+      unless in an encrypted password manager. Anyone with these words has full access
+      to your funds.
+    </div>
+    <div class="words-grid" id="words-grid"></div>
+    <label class="checkbox-label">
+      <input type="checkbox" id="backup-confirm">
+      <span>I have written down my seed phrase and stored it safely</span>
+    </label>
+    <button class="btn btn-primary" id="btn-continue-generate" disabled>Continue to wallet</button>
+    <div class="mt-3">
+      <button class="btn btn-ghost" id="btn-back-generate" style="width:100%">← Back to login</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     SCREEN 3: WALLET
+════════════════════════════════════════ -->
+<div id="screen-wallet" class="screen">
+
+  <!-- Header bar -->
+  <header class="wallet-header">
+    <div class="header-left">
+      <svg width="22" height="22" viewBox="0 0 108.4 101.7" xmlns="http://www.w3.org/2000/svg">
+        <polygon fill="#BC8500" points="57.5,44.2 57.5,37.5 57.5,30.8 57.5,24.1 50.8,24.1 44.2,24.1 37.5,24.1 37.5,30.8 30.8,30.8 30.8,37.5 30.8,44.2 37.5,44.2 37.5,37.5 44.2,37.5 44.2,44.2 44.2,50.8 50.8,50.8 57.5,50.8"/>
+        <polygon fill="#BC8500" points="91,44.2 84.3,44.2 84.3,50.8 84.3,57.5 77.6,57.5 77.6,64.2 84.3,64.2 91,64.2 91,57.5 91,50.8 97.7,50.8 97.7,44.2"/>
+        <polygon fill="#FEFFFF" points="70.9,70.9 70.9,64.2 64.2,64.2 57.5,64.2 50.8,64.2 50.8,57.5 57.5,57.5 57.5,50.8 50.8,50.8 44.2,50.8 37.5,50.8 37.5,44.2 30.8,44.2 30.8,37.5 30.8,30.8 30.8,24.1 24.1,24.1 24.1,30.8 17.4,30.8 17.4,37.5 24.1,37.5 24.1,44.2 24.1,50.8 30.8,50.8 30.8,57.5 24.1,57.5 17.4,57.5 17.4,64.2 24.1,64.2 24.1,77.6 37.5,77.6 37.5,91 44.2,91 44.2,77.6 50.8,77.6 50.8,84.3 57.5,84.3 64.2,84.3 64.2,77.6 70.9,77.6 70.9,91 77.6,91 77.6,70.9"/>
+      </svg>
+      <span class="header-title">Apex Wallet</span>
+    </div>
+    <div class="header-right">
+      <div class="server-indicator">
+        <span class="server-dot" id="server-dot"></span>
+        <span class="server-label" id="server-label"></span>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="btn-lock">Lock</button>
+    </div>
+  </header>
+
+  <!-- Balance card -->
+  <div class="card balance-card">
+    <div class="balance-amount" id="balance-confirmed">
+      <span id="balance-value">—</span> <span class="unit">MEWC</span>
+    </div>
+    <div class="balance-unconfirmed hidden" id="balance-unconfirmed"></div>
+    <div class="address-row">
+      <span class="address-mono" id="address-display" title=""></span>
+      <button class="icon-btn" id="btn-copy-address" title="Copy address">⎘</button>
+      <button class="icon-btn" id="btn-refresh" title="Refresh balance">↻</button>
+    </div>
+  </div>
+
+  <!-- Wallet tabs -->
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchWalletTab('send')">Send</button>
+    <button class="tab-btn" onclick="switchWalletTab('receive')">Receive</button>
+    <button class="tab-btn" onclick="switchWalletTab('history')">History</button>
+  </div>
+
+  <!-- ── SEND TAB ── -->
+  <div id="wallet-tab-send" class="tab-content active">
+    <div class="card">
+      <div class="field-group">
+        <label for="send-to">recipient address</label>
+        <input type="text" id="send-to" autocomplete="off" spellcheck="false" placeholder="M...">
+      </div>
+      <div class="field-group">
+        <label for="send-amount">amount (MEWC)</label>
+        <div class="input-with-btn">
+          <input type="number" id="send-amount" min="0" step="0.00000001" placeholder="0.00000000">
+          <button class="btn btn-secondary btn-sm" id="btn-send-max">Send max</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <label for="fee-rate">fee rate (sat/byte)</label>
+        <input type="number" id="fee-rate" value="10" min="1" step="1">
+      </div>
+      <p class="fee-estimate" id="fee-estimate"></p>
+      <div class="error-box hidden" id="send-error"></div>
+      <button class="btn btn-primary" id="btn-build-tx">Build transaction</button>
+    </div>
+
+    <!-- Transaction preview (hidden until built) -->
+    <div class="card hidden" id="tx-preview">
+      <h3>Transaction preview</h3>
+      <div class="tx-summary">
+        <div class="tx-row">
+          <span>To</span>
+          <span class="mono" id="preview-to"></span>
+        </div>
+        <div class="tx-row">
+          <span>Amount</span>
+          <span id="preview-amount"></span>
+        </div>
+        <div class="tx-row">
+          <span>Fee</span>
+          <span id="preview-fee"></span>
+        </div>
+        <div class="tx-row" id="preview-change-row">
+          <span>Change</span>
+          <span id="preview-change"></span>
+        </div>
+        <div class="tx-row total">
+          <span>Total deducted</span>
+          <span id="preview-total"></span>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="btn-broadcast">Broadcast transaction</button>
+      <div class="hidden" id="tx-success">
+        <div class="mt-3 success-box">
+          <p class="success-text">✓ Transaction broadcast successfully</p>
+          <div class="txid-display">
+            txid: <a id="success-txid-link" href="#" target="_blank" rel="noopener noreferrer"></a>
+          </div>
+          <button class="btn btn-secondary mt-2" id="btn-send-another">Send another</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RECEIVE TAB ── -->
+  <div id="wallet-tab-receive" class="tab-content">
+    <div class="card">
+      <label>your address</label>
+      <div class="receive-address-display" id="receive-address"></div>
+      <div class="qr-container">
+        <canvas id="qr-canvas"></canvas>
+      </div>
+      <button class="btn btn-secondary" id="btn-copy-address-receive">Copy address</button>
+      <p class="hint mt-3" id="receive-path-note"></p>
+    </div>
+  </div>
+
+  <!-- ── HISTORY TAB ── -->
+  <div id="wallet-tab-history" class="tab-content">
+    <div class="card">
+      <p class="text-muted" style="margin-bottom:14px;">
+        Transaction history is not loaded automatically to preserve privacy.
+      </p>
+      <button class="btn btn-secondary" id="btn-load-history">Load transaction history</button>
+      <div class="hidden" id="history-loading" style="text-align:center;padding:20px;color:var(--muted)">Loading…</div>
+      <div class="hidden" id="history-empty"><p class="empty-state">no transactions found for this address</p></div>
+      <div class="hidden error-box" id="history-error"></div>
+      <div class="history-list hidden" id="history-list"></div>
+    </div>
+  </div>
+
+</div><!-- /screen-wallet -->
+
+<!-- Toast -->
+<div class="toast hidden" id="toast"></div>
+
+
+<!-- ════════════════════════════════════════
+     SCRIPTS
+════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"
+        integrity="sha384-Izc791esqyEy3BEIC42q7jbE0AaOkACziN+dyyXgYeDmpeMCLz0xA+xYN3aCd5zz"
+        crossorigin="anonymous"></script>
+
+<script type="module">
+// ── CDN Imports ──────────────────────────────────────────────────────────────
+// jsDelivr +esm bundles are generated dynamically; SRI cannot be used per
+// jsDelivr docs. Security: pinned exact semver + GPG-signed release artifact.
+import {
+  generateMnemonic, validateMnemonic, mnemonicToSeedSync
+} from 'https://cdn.jsdelivr.net/npm/@scure/bip39@1.2.0/+esm';
+
+import {
+  wordlist as englishWordlist
+} from 'https://cdn.jsdelivr.net/npm/@scure/bip39@1.2.0/wordlists/english.js/+esm';
+
+import {
+  HDKey
+} from 'https://cdn.jsdelivr.net/npm/@scure/bip32@1.3.3/+esm';
+
+import {
+  sha256
+} from 'https://cdn.jsdelivr.net/npm/@noble/hashes@1.3.3/sha256.js/+esm';
+
+import {
+  ripemd160
+} from 'https://cdn.jsdelivr.net/npm/@noble/hashes@1.3.3/ripemd160.js/+esm';
+
+import {
+  hmac
+} from 'https://cdn.jsdelivr.net/npm/@noble/hashes@1.3.3/hmac.js/+esm';
+
+import * as secp256k1 from 'https://cdn.jsdelivr.net/npm/@noble/secp256k1@1.7.1/+esm';
+
+// Wire up synchronous HMAC-SHA256 for deterministic signing (RFC 6979)
+secp256k1.utils.hmacSha256Sync = (key, ...msgs) => {
+  let total = 0;
+  for (const m of msgs) total += m.length;
+  const data = new Uint8Array(total);
+  let offset = 0;
+  for (const m of msgs) { data.set(m, offset); offset += m.length; }
+  return hmac(sha256, key, data);
+};
+
+// ── Constants ────────────────────────────────────────────────────────────────
+const DEFAULT_SERVER       = 'https://electrs.mewccrypto.com';
+const DEFAULT_PATH         = "m/44'/175'/0'/0";
+const EXPLORER_BASE        = 'https://explorer.mewccrypto.com';
+const MEWC_PUBKEY_HASH     = 0x32;   // Meowcoin P2PKH version byte → addresses start with M
+const MEWC_WIF_VERSION     = 0x80;
+const DUST_LIMIT           = 546;    // satoshis
+const BASE58_ALPHABET      = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+
+// ── Application state ────────────────────────────────────────────────────────
+let state = {
+  keyPair:        null,   // { privKey: Uint8Array, pubKey: Uint8Array }
+  address:        null,
+  serverUrl:      DEFAULT_SERVER,
+  balance:        null,   // { confirmed: sats, unconfirmed: sats }
+  utxos:          [],
+  derivationPath: null,   // null for WIF import
+  importMethod:   null,   // 'bip39' | 'wif'
+  builtTx:        null,   // { hex, fee, change }
+};
+
+// ── Utility helpers ──────────────────────────────────────────────────────────
+function concatBytes(...arrs) {
+  let total = 0;
+  for (const a of arrs) total += a.length;
+  const out = new Uint8Array(total);
+  let off = 0;
+  for (const a of arrs) { out.set(a, off); off += a.length; }
+  return out;
+}
+
+function bytesToHex(bytes) {
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function hexToBytes(hex) {
+  if (hex.length % 2) throw new Error('Invalid hex string');
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < bytes.length; i++)
+    bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  return bytes;
+}
+
+function satsToMEWC(sats) {
+  return (sats / 1e8).toFixed(8);
+}
+
+function MEWCToSats(mewc) {
+  return Math.round(parseFloat(mewc) * 1e8);
+}
+
+function truncateAddress(addr) {
+  if (!addr || addr.length <= 16) return addr;
+  return addr.slice(0, 8) + '…' + addr.slice(-8);
+}
+
+function formatDate(blockTime) {
+  if (!blockTime) return '';
+  return new Date(blockTime * 1000).toLocaleDateString(undefined, {
+    month: 'short', day: 'numeric', year: 'numeric'
+  });
+}
+
+// ── Base58 / Base58Check ─────────────────────────────────────────────────────
+function base58Encode(bytes) {
+  let leadingZeros = 0;
+  for (const b of bytes) { if (b === 0) leadingZeros++; else break; }
+
+  let num = BigInt(0);
+  for (const b of bytes) num = num * 256n + BigInt(b);
+
+  let result = '';
+  while (num > 0n) {
+    const rem = Number(num % 58n);
+    num = num / 58n;
+    result = BASE58_ALPHABET[rem] + result;
+  }
+  return '1'.repeat(leadingZeros) + result;
+}
+
+function base58Decode(str) {
+  let leadingZeros = 0;
+  for (const ch of str) { if (ch === '1') leadingZeros++; else break; }
+
+  let num = 0n;
+  for (const ch of str) {
+    const digit = BASE58_ALPHABET.indexOf(ch);
+    if (digit < 0) throw new Error(`Invalid base58 character: ${ch}`);
+    num = num * 58n + BigInt(digit);
+  }
+
+  let hex = num.toString(16);
+  if (hex.length % 2) hex = '0' + hex;
+  const bytes = hexToBytes(hex);
+
+  const out = new Uint8Array(leadingZeros + bytes.length);
+  out.set(bytes, leadingZeros);
+  return out;
+}
+
+function sha256d(data) {
+  return sha256(sha256(data));
+}
+
+function base58CheckEncode(payload) {
+  const checksum = sha256d(payload).slice(0, 4);
+  return base58Encode(concatBytes(payload, checksum));
+}
+
+function base58CheckDecode(str) {
+  const decoded = base58Decode(str);
+  if (decoded.length < 5) throw new Error('Invalid base58check data');
+  const payload  = decoded.slice(0, -4);
+  const checksum = decoded.slice(-4);
+  const expected = sha256d(payload).slice(0, 4);
+  for (let i = 0; i < 4; i++) {
+    if (checksum[i] !== expected[i]) throw new Error('Invalid checksum — address may be corrupted');
+  }
+  return payload;
+}
+
+// ── Address generation ───────────────────────────────────────────────────────
+function hash160(data) {
+  return ripemd160(sha256(data));
+}
+
+function pubkeyToAddress(pubKey) {
+  const h160 = hash160(pubKey);
+  const payload = new Uint8Array(21);
+  payload[0] = MEWC_PUBKEY_HASH;
+  payload.set(h160, 1);
+  return base58CheckEncode(payload);
+}
+
+function decodeAddress(address) {
+  const payload = base58CheckDecode(address);
+  if (payload.length !== 21) throw new Error('Invalid address length');
+  return payload.slice(1); // 20-byte hash160
+}
+
+// ── WIF decode ───────────────────────────────────────────────────────────────
+function wifToPrivateKey(wif) {
+  const payload = base58CheckDecode(wif.trim());
+  if (payload[0] !== MEWC_WIF_VERSION)
+    throw new Error(`Invalid WIF version byte: expected 0x80, got 0x${payload[0].toString(16)}`);
+  if (payload.length === 34 && payload[33] !== 0x01)
+    throw new Error('Invalid WIF: unexpected compression flag');
+  if (payload.length !== 33 && payload.length !== 34)
+    throw new Error('Invalid WIF length');
+  return payload.slice(1, 33); // 32-byte private key
+}
+
+// ── Transaction building ─────────────────────────────────────────────────────
+function writeUInt32LE(n) {
+  const b = new Uint8Array(4);
+  b[0] = n & 0xff; b[1] = (n >>> 8) & 0xff;
+  b[2] = (n >>> 16) & 0xff; b[3] = (n >>> 24) & 0xff;
+  return b;
+}
+
+function writeUInt64LE(n) {
+  const big = BigInt(n);
+  const lo = Number(big & 0xffffffffn);
+  const hi = Number(big >> 32n);
+  const b = new Uint8Array(8);
+  b[0] = lo & 0xff; b[1] = (lo >>> 8) & 0xff;
+  b[2] = (lo >>> 16) & 0xff; b[3] = (lo >>> 24) & 0xff;
+  b[4] = hi & 0xff; b[5] = (hi >>> 8) & 0xff;
+  b[6] = (hi >>> 16) & 0xff; b[7] = (hi >>> 24) & 0xff;
+  return b;
+}
+
+function writeVarInt(n) {
+  if (n < 0xfd) return new Uint8Array([n]);
+  if (n <= 0xffff) {
+    return new Uint8Array([0xfd, n & 0xff, (n >> 8) & 0xff]);
+  }
+  if (n <= 0xffffffff) {
+    return new Uint8Array([
+      0xfe, n & 0xff, (n >> 8) & 0xff, (n >> 16) & 0xff, (n >> 24) & 0xff
+    ]);
+  }
+  throw new Error('VarInt too large');
+}
+
+function buildP2PKHScript(h160) {
+  // OP_DUP OP_HASH160 PUSH20 <hash160> OP_EQUALVERIFY OP_CHECKSIG
+  return new Uint8Array([0x76, 0xa9, 0x14, ...h160, 0x88, 0xac]);
+}
+
+function serializeTx(inputs, outputs, scriptForInput) {
+  const parts = [writeUInt32LE(1)]; // version
+  parts.push(writeVarInt(inputs.length));
+  for (let i = 0; i < inputs.length; i++) {
+    const inp = inputs[i];
+    // txid in little-endian (reverse the bytes)
+    parts.push(hexToBytes(inp.txid).reverse());
+    parts.push(writeUInt32LE(inp.vout));
+    const script = scriptForInput ? scriptForInput(i) : new Uint8Array(0);
+    parts.push(writeVarInt(script.length));
+    if (script.length) parts.push(script);
+    parts.push(writeUInt32LE(0xffffffff)); // sequence
+  }
+  parts.push(writeVarInt(outputs.length));
+  for (const out of outputs) {
+    parts.push(writeUInt64LE(out.value));
+    parts.push(writeVarInt(out.script.length));
+    parts.push(out.script);
+  }
+  parts.push(writeUInt32LE(0)); // locktime
+  return concatBytes(...parts);
+}
+
+function legacySighash(inputs, outputs, inputIndex, scriptPubKey) {
+  const raw = serializeTx(inputs, outputs, i =>
+    i === inputIndex ? scriptPubKey : new Uint8Array(0)
+  );
+  const withType = concatBytes(raw, writeUInt32LE(1)); // SIGHASH_ALL
+  return sha256d(withType);
+}
+
+function buildSignedTx(utxos, toAddress, amountSats, changeAddress, feeRate) {
+  const { privKey, pubKey } = state.keyPair;
+  const totalIn = utxos.reduce((s, u) => s + u.value, 0);
+
+  // Estimate fee (always assume 2 outputs for fee calc per spec)
+  const numInputs = utxos.length;
+  const estimatedFee = (numInputs * 148 + 2 * 34 + 10) * feeRate;
+
+  if (amountSats + estimatedFee > totalIn)
+    throw new Error('Insufficient funds (including fee)');
+
+  let change = totalIn - amountSats - estimatedFee;
+  let fee = estimatedFee;
+
+  // Build outputs
+  const toHash160     = decodeAddress(toAddress);
+  const changeHash160 = hash160(pubKey);
+
+  const outputs = [{ value: amountSats, script: buildP2PKHScript(toHash160) }];
+  if (change >= DUST_LIMIT) {
+    outputs.push({ value: change, script: buildP2PKHScript(changeHash160) });
+  } else {
+    // Change below dust goes to miner; recalc fee with 1 output
+    const singleFee = (numInputs * 148 + 34 + 10) * feeRate;
+    fee = singleFee;
+    change = 0;
+    if (amountSats + singleFee > totalIn)
+      throw new Error('Insufficient funds (including fee)');
+  }
+
+  const inputs = utxos.map(u => ({ txid: u.txid, vout: u.vout }));
+  const myScript = buildP2PKHScript(hash160(pubKey));
+
+  // Sign each input
+  const scriptSigs = inputs.map((_, i) => {
+    const sigHash = legacySighash(inputs, outputs, i, myScript);
+    const derSig  = secp256k1.signSync(sigHash, privKey, { canonical: true });
+    const sigWithType = concatBytes(derSig, new Uint8Array([0x01]));
+    return concatBytes(
+      new Uint8Array([sigWithType.length]), sigWithType,
+      new Uint8Array([pubKey.length]),     pubKey
+    );
+  });
+
+  const finalTx = serializeTx(inputs, outputs, i => scriptSigs[i]);
+  return { hex: bytesToHex(finalTx), fee, change: change >= DUST_LIMIT ? change : 0 };
+}
+
+function estimateFee(numInputs, feeRate) {
+  return (numInputs * 148 + 2 * 34 + 10) * feeRate;
+}
+
+// ── API helpers ──────────────────────────────────────────────────────────────
+async function apiFetch(path, options = {}) {
+  const ctrl  = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 10000);
+  try {
+    const r = await fetch(state.serverUrl + path, { ...options, signal: ctrl.signal });
+    if (!r.ok) {
+      const body = await r.text().catch(() => '');
+      throw new Error(`Server error ${r.status}${body ? ': ' + body.slice(0, 120) : ''}`);
+    }
+    return r;
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('Request timed out (10s). Check the server URL.');
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchBalance() {
+  const r    = await apiFetch(`/address/${state.address}`);
+  const data = await r.json();
+  const confirmed   = data.chain_stats.funded_txo_sum   - data.chain_stats.spent_txo_sum;
+  const unconfirmed = data.mempool_stats.funded_txo_sum - data.mempool_stats.spent_txo_sum;
+  state.balance = { confirmed, unconfirmed };
+}
+
+async function fetchUTXOs() {
+  const r    = await apiFetch(`/address/${state.address}/utxo`);
+  state.utxos = await r.json();
+}
+
+async function fetchHistory() {
+  // First 25
+  const r1   = await apiFetch(`/address/${state.address}/txs`);
+  let txs    = await r1.json();
+
+  // Try to get another 25 (up to 50 total)
+  if (txs.length === 25) {
+    try {
+      const lastTxid = txs[txs.length - 1].txid;
+      const r2 = await apiFetch(`/address/${state.address}/txs/chain/${lastTxid}`);
+      const more = await r2.json();
+      txs = txs.concat(more);
+    } catch (_) { /* pagination optional */ }
+  }
+  return txs.slice(0, 50);
+}
+
+async function checkServerHealth() {
+  try {
+    await apiFetch('/blocks/tip/height');
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+// ── UI helpers ───────────────────────────────────────────────────────────────
+function showScreen(name) {
+  for (const s of document.querySelectorAll('.screen'))
+    s.classList.toggle('active', s.id === `screen-${name}`);
+}
+
+function showError(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+function hideError(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.add('hidden');
+}
+
+let toastTimer = null;
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = `toast${type ? ' ' + type : ''}`;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.add('hidden'), 3200);
+}
+
+async function copyText(text, label = 'Copied!') {
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast(label, 'success');
+  } catch (_) {
+    // Fallback
+    const ta = Object.assign(document.createElement('textarea'), {
+      value: text, style: { position: 'fixed', opacity: '0' }
+    });
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast(label, 'success');
+  }
+}
+
+function switchLoginTab(tab) {
+  ['bip39', 'privkey'].forEach(t => {
+    document.getElementById(`login-tab-${t}`).classList.toggle('active', t === tab);
+    document.getElementById(`tab-content-${t}`).classList.toggle('active', t === tab);
+  });
+}
+
+function switchWalletTab(tab) {
+  document.querySelectorAll('.tab-bar')[1]?.querySelectorAll('.tab-btn').forEach((btn, i) => {
+    const tabs = ['send', 'receive', 'history'];
+    btn.classList.toggle('active', tabs[i] === tab);
+  });
+  ['send', 'receive', 'history'].forEach(t => {
+    const el = document.getElementById(`wallet-tab-${t}`);
+    if (el) el.classList.toggle('active', t === tab);
+  });
+}
+
+function renderBalance() {
+  const { confirmed, unconfirmed } = state.balance;
+  document.getElementById('balance-value').textContent = satsToMEWC(confirmed);
+
+  const unconfEl = document.getElementById('balance-unconfirmed');
+  if (unconfirmed !== 0) {
+    const sign = unconfirmed > 0 ? '+' : '';
+    unconfEl.textContent = `Unconfirmed: ${sign}${satsToMEWC(unconfirmed)} MEWC`;
+    unconfEl.classList.remove('hidden');
+  } else {
+    unconfEl.classList.add('hidden');
+  }
+}
+
+function updateFeeEstimate() {
+  const feeRate  = parseInt(document.getElementById('fee-rate').value) || 10;
+  const numInput = Math.max(state.utxos.length, 1);
+  const feeSats  = estimateFee(numInput, feeRate);
+  document.getElementById('fee-estimate').textContent =
+    `Estimated fee: ${satsToMEWC(feeSats)} MEWC (${feeSats} sat)`;
+}
+
+async function updateServerIndicator() {
+  const dot   = document.getElementById('server-dot');
+  const label = document.getElementById('server-label');
+  dot.className = 'server-dot';
+  try {
+    const url    = new URL(state.serverUrl);
+    label.textContent = url.hostname;
+  } catch (_) {
+    label.textContent = state.serverUrl.slice(0, 24);
+  }
+  const ok = await checkServerHealth();
+  dot.classList.add(ok ? 'green' : 'red');
+}
+
+// ── Wallet init ──────────────────────────────────────────────────────────────
+async function initWalletScreen() {
+  showScreen('wallet');
+
+  // Display address
+  const addr    = state.address;
+  const addrEl  = document.getElementById('address-display');
+  addrEl.textContent = truncateAddress(addr);
+  addrEl.title = addr;
+
+  // Receive tab
+  document.getElementById('receive-address').textContent = addr;
+  const pathNote = document.getElementById('receive-path-note');
+  if (state.importMethod === 'bip39') {
+    pathNote.textContent =
+      `This address is derived from your seed phrase at path ${state.derivationPath}. ` +
+      `To use a different address, adjust the derivation path index on the login screen.`;
+  } else {
+    pathNote.textContent =
+      `This address is derived from your imported private key.`;
+  }
+
+  // Generate QR code
+  if (typeof QRCode !== 'undefined') {
+    QRCode.toCanvas(
+      document.getElementById('qr-canvas'),
+      addr,
+      { width: 224, margin: 2, color: { dark: '#000000', light: '#ffffff' } },
+      err => { if (err) console.warn('QR error:', err); }
+    );
+  }
+
+  updateFeeEstimate();
+  updateServerIndicator();
+
+  // Load balance + UTXOs
+  const refreshBtn = document.getElementById('btn-refresh');
+  refreshBtn.classList.add('loading');
+  try {
+    await Promise.all([fetchBalance(), fetchUTXOs()]);
+    renderBalance();
+    updateFeeEstimate();
+  } catch (e) {
+    showToast('Could not load balance: ' + e.message, 'error');
+    document.getElementById('balance-value').textContent = 'error';
+  } finally {
+    refreshBtn.classList.remove('loading');
+  }
+}
+
+function lockWallet() {
+  // Clear all sensitive state
+  state = {
+    keyPair: null, address: null,
+    serverUrl: document.getElementById('server-url')?.value || DEFAULT_SERVER,
+    balance: null, utxos: [], derivationPath: null, importMethod: null, builtTx: null
+  };
+  // Reset forms
+  document.getElementById('mnemonic-input').value = '';
+  document.getElementById('privkey-input').value  = '';
+  document.getElementById('word-count').textContent = '0 words';
+  document.getElementById('word-count').className = 'word-count';
+  hideError('bip39-error');
+  hideError('privkey-error');
+
+  // Reset send form
+  ['send-to', 'send-amount'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('fee-rate').value = '10';
+  document.getElementById('tx-preview').classList.add('hidden');
+  document.getElementById('tx-success').classList.add('hidden');
+  hideError('send-error');
+
+  // Reset history
+  document.getElementById('history-list').innerHTML   = '';
+  document.getElementById('history-list').classList.add('hidden');
+  document.getElementById('history-empty').classList.add('hidden');
+  document.getElementById('history-error').classList.add('hidden');
+  document.getElementById('btn-load-history').classList.remove('hidden');
+
+  showScreen('login');
+  switchLoginTab('bip39');
+  switchWalletTab('send');
+}
+
+// ── Event wiring ─────────────────────────────────────────────────────────────
+
+// Mnemonic word count
+document.getElementById('mnemonic-input').addEventListener('input', function () {
+  const words = this.value.trim().split(/\s+/).filter(Boolean).length;
+  const wc    = document.getElementById('word-count');
+  wc.textContent = `${words} word${words === 1 ? '' : 's'}`;
+  wc.className   = 'word-count' + (words === 12 || words === 24 ? ' valid' : (words > 0 ? ' invalid' : ''));
+});
+
+// Fee estimate live update
+document.getElementById('fee-rate').addEventListener('input', updateFeeEstimate);
+
+// Open wallet from BIP39
+document.getElementById('btn-open-bip39').addEventListener('click', async () => {
+  hideError('bip39-error');
+  const mnemonic = document.getElementById('mnemonic-input').value.trim().toLowerCase().replace(/\s+/g, ' ');
+  const path     = document.getElementById('derivation-path').value.trim();
+  state.serverUrl = document.getElementById('server-url').value.trim() || DEFAULT_SERVER;
+
+  if (!mnemonic) return showError('bip39-error', 'Please enter your seed phrase.');
+  if (!validateMnemonic(mnemonic, englishWordlist))
+    return showError('bip39-error', 'Invalid seed phrase. Check the words and try again. (Electrum seed phrases are not supported — use Private Key import instead.)');
+  if (!path.startsWith('m/'))
+    return showError('bip39-error', 'Invalid derivation path. Must start with m/');
+
+  try {
+    const seed  = mnemonicToSeedSync(mnemonic);
+    const root  = HDKey.fromMasterSeed(seed);
+    const child = root.derive(path);
+    if (!child.privateKey) throw new Error('Could not derive key at this path');
+
+    const privKey = child.privateKey;
+    const pubKey  = secp256k1.getPublicKey(privKey, true); // compressed
+
+    state.keyPair        = { privKey, pubKey };
+    state.address        = pubkeyToAddress(pubKey);
+    state.derivationPath = path;
+    state.importMethod   = 'bip39';
+
+    await initWalletScreen();
+  } catch (e) {
+    showError('bip39-error', e.message);
+  }
+});
+
+// Open wallet from WIF
+document.getElementById('btn-open-privkey').addEventListener('click', async () => {
+  hideError('privkey-error');
+  const wif = document.getElementById('privkey-input').value.trim();
+  state.serverUrl = document.getElementById('server-url').value.trim() || DEFAULT_SERVER;
+
+  if (!wif) return showError('privkey-error', 'Please enter a WIF private key.');
+
+  try {
+    const privKey = wifToPrivateKey(wif);
+    const pubKey  = secp256k1.getPublicKey(privKey, true);
+
+    state.keyPair      = { privKey, pubKey };
+    state.address      = pubkeyToAddress(pubKey);
+    state.importMethod = 'wif';
+
+    await initWalletScreen();
+  } catch (e) {
+    showError('privkey-error', e.message);
+  }
+});
+
+// Generate new wallet
+let generatedMnemonic = null;
+document.getElementById('btn-generate').addEventListener('click', () => {
+  generatedMnemonic = generateMnemonic(englishWordlist, 128); // 12 words
+  const words = generatedMnemonic.split(' ');
+  const grid  = document.getElementById('words-grid');
+  grid.innerHTML = words.map((w, i) =>
+    `<div class="word-cell"><span class="word-num">${i + 1}</span><span class="word-text">${w}</span></div>`
+  ).join('');
+
+  document.getElementById('backup-confirm').checked = false;
+  document.getElementById('btn-continue-generate').disabled = true;
+  showScreen('generate');
+});
+
+document.getElementById('backup-confirm').addEventListener('change', function () {
+  document.getElementById('btn-continue-generate').disabled = !this.checked;
+});
+
+document.getElementById('btn-continue-generate').addEventListener('click', () => {
+  if (!generatedMnemonic) return;
+  document.getElementById('mnemonic-input').value = generatedMnemonic;
+  // Update word count
+  const wc = document.getElementById('word-count');
+  wc.textContent = '12 words';
+  wc.className   = 'word-count valid';
+  showScreen('login');
+  switchLoginTab('bip39');
+  generatedMnemonic = null;
+});
+
+document.getElementById('btn-back-generate').addEventListener('click', () => {
+  generatedMnemonic = null;
+  showScreen('login');
+});
+
+// Lock
+document.getElementById('btn-lock').addEventListener('click', lockWallet);
+
+// Copy address (balance card)
+document.getElementById('btn-copy-address').addEventListener('click', () => {
+  if (state.address) copyText(state.address, 'Address copied!');
+});
+
+// Refresh balance
+document.getElementById('btn-refresh').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-refresh');
+  btn.classList.add('loading');
+  try {
+    await Promise.all([fetchBalance(), fetchUTXOs()]);
+    renderBalance();
+    updateFeeEstimate();
+    await updateServerIndicator();
+  } catch (e) {
+    showToast('Refresh failed: ' + e.message, 'error');
+  } finally {
+    btn.classList.remove('loading');
+  }
+});
+
+// Send max
+document.getElementById('btn-send-max').addEventListener('click', () => {
+  if (!state.utxos.length) {
+    showToast('No UTXOs available. Refresh balance first.', 'error');
+    return;
+  }
+  const feeRate  = parseInt(document.getElementById('fee-rate').value) || 10;
+  const totalIn  = state.utxos.reduce((s, u) => s + u.value, 0);
+  const fee      = estimateFee(state.utxos.length, feeRate);
+  const maxSats  = Math.max(0, totalIn - fee);
+  document.getElementById('send-amount').value = satsToMEWC(maxSats);
+});
+
+// Build transaction
+document.getElementById('btn-build-tx').addEventListener('click', () => {
+  hideError('send-error');
+  document.getElementById('tx-preview').classList.add('hidden');
+  document.getElementById('tx-success').classList.add('hidden');
+
+  const toAddr   = document.getElementById('send-to').value.trim();
+  const amtStr   = document.getElementById('send-amount').value;
+  const feeRate  = parseInt(document.getElementById('fee-rate').value) || 10;
+
+  if (!toAddr)         return showError('send-error', 'Enter a recipient address.');
+  if (!amtStr || isNaN(parseFloat(amtStr)) || parseFloat(amtStr) <= 0)
+    return showError('send-error', 'Enter a valid amount.');
+  if (feeRate < 1)     return showError('send-error', 'Fee rate must be at least 1 sat/byte.');
+  if (!state.utxos.length)
+    return showError('send-error', 'No UTXOs available. Refresh balance first.');
+
+  const amtSats = MEWCToSats(amtStr);
+
+  try {
+    const result = buildSignedTx(state.utxos, toAddr, amtSats, state.address, feeRate);
+    state.builtTx = result;
+
+    // Show preview
+    const hasChange = result.change > 0;
+    document.getElementById('preview-to').textContent     = toAddr;
+    document.getElementById('preview-amount').textContent = `${satsToMEWC(amtSats)} MEWC`;
+    document.getElementById('preview-fee').textContent    =
+      `${satsToMEWC(result.fee)} MEWC (${result.fee} sat @ ${feeRate} sat/byte)`;
+    document.getElementById('preview-change').textContent = hasChange
+      ? `${satsToMEWC(result.change)} MEWC` : '—';
+    document.getElementById('preview-change-row').style.display = hasChange ? '' : 'none';
+    document.getElementById('preview-total').textContent  =
+      `${satsToMEWC(amtSats + result.fee)} MEWC`;
+
+    document.getElementById('tx-preview').classList.remove('hidden');
+    document.getElementById('tx-preview').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } catch (e) {
+    showError('send-error', e.message);
+  }
+});
+
+// Broadcast transaction
+document.getElementById('btn-broadcast').addEventListener('click', async () => {
+  if (!state.builtTx) return;
+  const btn = document.getElementById('btn-broadcast');
+  btn.classList.add('loading');
+  btn.textContent = 'Broadcasting…';
+
+  try {
+    const r = await apiFetch('/tx', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: state.builtTx.hex
+    });
+    const txid = (await r.text()).trim();
+
+    const link = document.getElementById('success-txid-link');
+    link.textContent = txid;
+    link.href = `${EXPLORER_BASE}/tx/${txid}`;
+
+    document.getElementById('tx-success').classList.remove('hidden');
+    btn.classList.add('hidden');
+
+    // Refresh balance after broadcast
+    setTimeout(async () => {
+      try {
+        await Promise.all([fetchBalance(), fetchUTXOs()]);
+        renderBalance();
+        updateFeeEstimate();
+      } catch (_) {}
+    }, 3000);
+  } catch (e) {
+    showToast('Broadcast failed: ' + e.message, 'error');
+    btn.textContent = 'Broadcast transaction';
+    btn.classList.remove('loading');
+  } finally {
+    if (!btn.classList.contains('hidden')) {
+      btn.textContent = 'Broadcast transaction';
+      btn.classList.remove('loading');
+    }
+  }
+});
+
+// Send another
+document.getElementById('btn-send-another').addEventListener('click', () => {
+  document.getElementById('send-to').value    = '';
+  document.getElementById('send-amount').value = '';
+  document.getElementById('tx-preview').classList.add('hidden');
+  document.getElementById('tx-success').classList.add('hidden');
+  document.getElementById('btn-broadcast').classList.remove('hidden');
+  document.getElementById('btn-broadcast').textContent = 'Broadcast transaction';
+  hideError('send-error');
+  state.builtTx = null;
+});
+
+// Copy address (receive tab)
+document.getElementById('btn-copy-address-receive').addEventListener('click', () => {
+  if (state.address) copyText(state.address, 'Address copied!');
+});
+
+// Load history
+document.getElementById('btn-load-history').addEventListener('click', async () => {
+  const loadBtn    = document.getElementById('btn-load-history');
+  const loadingEl  = document.getElementById('history-loading');
+  const listEl     = document.getElementById('history-list');
+  const emptyEl    = document.getElementById('history-empty');
+  const errorEl    = document.getElementById('history-error');
+
+  loadBtn.classList.add('hidden');
+  loadingEl.classList.remove('hidden');
+  listEl.classList.add('hidden');
+  emptyEl.classList.add('hidden');
+  errorEl.classList.add('hidden');
+
+  try {
+    const txs = await fetchHistory();
+    loadingEl.classList.add('hidden');
+
+    if (!txs.length) {
+      emptyEl.classList.remove('hidden');
+      return;
+    }
+
+    listEl.innerHTML = txs.map(tx => {
+      const netSats = computeTxNet(tx, state.address);
+      const sign    = netSats > 0 ? '+' : '';
+      const cls     = netSats > 0 ? 'positive' : netSats < 0 ? 'negative' : 'zero';
+      const badge   = tx.status.confirmed
+        ? '<span class="badge badge-confirmed">confirmed</span>'
+        : '<span class="badge badge-unconfirmed">unconfirmed</span>';
+      const date = tx.status.confirmed ? `<span class="history-date">${formatDate(tx.status.block_time)}</span>` : '';
+      return `
+        <div class="history-item">
+          <div class="history-item-left">
+            <a class="history-txid"
+               href="${EXPLORER_BASE}/tx/${tx.txid}"
+               target="_blank" rel="noopener noreferrer"
+               title="${tx.txid}">${tx.txid.slice(0, 16)}…</a>
+            <div class="history-meta">${badge}${date}</div>
+          </div>
+          <span class="history-amount ${cls}">${sign}${satsToMEWC(Math.abs(netSats))} MEWC</span>
+        </div>
+      `;
+    }).join('');
+
+    listEl.classList.remove('hidden');
+  } catch (e) {
+    loadingEl.classList.add('hidden');
+    errorEl.textContent = 'Failed to load history: ' + e.message;
+    errorEl.classList.remove('hidden');
+    loadBtn.classList.remove('hidden');
+  }
+});
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function computeTxNet(tx, myAddress) {
+  let received = 0, spent = 0;
+  for (const vout of tx.vout) {
+    if (vout.scriptpubkey_address === myAddress) received += vout.value;
+  }
+  for (const vin of tx.vin) {
+    if (!vin.is_coinbase && vin.prevout && vin.prevout.scriptpubkey_address === myAddress)
+      spent += vin.prevout.value;
+  }
+  return received - spent;
+}
+
+// Make switchWalletTab available for onclick attributes
+window.switchWalletTab = switchWalletTab;
+window.switchLoginTab  = switchLoginTab;
+
+</script>
+</body>
+</html>
