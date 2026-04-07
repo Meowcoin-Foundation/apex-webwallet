@@ -820,7 +820,8 @@
       </div>
       <div class="field-group">
         <label for="fee-rate">fee rate (sat/byte)</label>
-        <input type="number" id="fee-rate" value="10" min="1" step="1">
+        <input type="number" id="fee-rate" value="1000" min="1000" step="100">
+        <p class="hint">Minimum 1000 sat/byte — legacy Meowcoin nodes require ≥0.01 MEWC/kb to relay transactions</p>
       </div>
       <p class="fee-estimate" id="fee-estimate"></p>
       <div class="error-box hidden" id="send-error"></div>
@@ -3412,7 +3413,7 @@ function renderBalance() {
 }
 
 function updateFeeEstimate() {
-  const feeRate  = parseInt(document.getElementById('fee-rate').value) || 10;
+  const feeRate  = parseInt(document.getElementById('fee-rate').value) || 1000;
   const numInput = Math.max(state.utxos.length, 1);
   const feeSats  = estimateFee(numInput, feeRate);
   document.getElementById('fee-estimate').textContent =
@@ -3500,7 +3501,7 @@ function lockWallet() {
 
   // Reset send form
   ['send-to', 'send-amount'].forEach(id => { document.getElementById(id).value = ''; });
-  document.getElementById('fee-rate').value = '10';
+  document.getElementById('fee-rate').value = '1000';
   document.getElementById('tx-preview').classList.add('hidden');
   document.getElementById('tx-success').classList.add('hidden');
   hideError('send-error');
@@ -3651,7 +3652,7 @@ document.getElementById('btn-send-max').addEventListener('click', () => {
     showToast('No UTXOs available. Refresh balance first.', 'error');
     return;
   }
-  const feeRate  = parseInt(document.getElementById('fee-rate').value) || 10;
+  const feeRate  = parseInt(document.getElementById('fee-rate').value) || 1000;
   const totalIn  = state.utxos.reduce((s, u) => s + u.value, 0);
   const fee      = estimateFee(state.utxos.length, feeRate);
   const maxSats  = Math.max(0, totalIn - fee);
@@ -3666,12 +3667,12 @@ document.getElementById('btn-build-tx').addEventListener('click', () => {
 
   const toAddr   = document.getElementById('send-to').value.trim();
   const amtStr   = document.getElementById('send-amount').value;
-  const feeRate  = parseInt(document.getElementById('fee-rate').value) || 10;
+  const feeRate  = parseInt(document.getElementById('fee-rate').value) || 1000;
 
   if (!toAddr)         return showError('send-error', 'Enter a recipient address.');
   if (!amtStr || isNaN(parseFloat(amtStr)) || parseFloat(amtStr) <= 0)
     return showError('send-error', 'Enter a valid amount.');
-  if (feeRate < 1)     return showError('send-error', 'Fee rate must be at least 1 sat/byte.');
+  if (feeRate < 1000)  return showError('send-error', 'Fee rate must be at least 1000 sat/byte — legacy Meowcoin nodes require ≥0.01 MEWC/kb to relay.');
   if (!state.utxos.length)
     return showError('send-error', 'No UTXOs available. Refresh balance first.');
 
