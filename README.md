@@ -1,14 +1,6 @@
-# Apex Wallet — Meowcoin
+# Apex Web Wallet — Meowcoin
 
 A lightweight, self-contained web wallet for Meowcoin (MEWC). Single static file — open `index.html` in any browser and go.
-
----
-
-## What is Apex Wallet?
-
-Apex Wallet is the recommended wallet for **Meowcoin Core Apex (v30.2.0+)**. It derives addresses using the BIP44 path `m/44'/175'/0'/0` (coin type 175), which is the standard path for Meowcoin post-Apex.
-
-If you were using the legacy Meowcoin Core wallet or Electrum, your funds are at a different derivation path or addressed differently. See the migration notes below.
 
 ---
 
@@ -19,17 +11,6 @@ If you were using the legacy Meowcoin Core wallet or Electrum, your funds are at
 3. Enter your seed phrase or private key and open your wallet.
 
 No installation, no npm, no server required.
-
----
-
-## Difference from the legacy wallet
-
-| | Apex Wallet | Legacy Wallet |
-|---|---|---|
-| Address format | P2PKH, version byte `0x32` (starts with **M**) | Same — addresses look identical |
-| Derivation path | `m/44'/175'/0'/0` | Varies — often `m/44'/175'/0'/0` but Electrum uses its own scheme |
-| Seed phrase type | BIP39 (standard 12 or 24 words) | Electrum uses its own non-BIP39 format |
-| Offline capable | Yes — open the file locally | No — requires a running node |
 
 ---
 
