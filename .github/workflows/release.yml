@@ -16,9 +16,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Generate SHA256 checksum
-        run: sha256sum index.html > SHA256SUMS
-
       - name: Determine release tag
         id: tag
         run: |
@@ -38,19 +35,7 @@ jobs:
           body: |
             ## Apex Wallet — Meowcoin
 
-            Single-file web wallet for Meowcoin (MEWC). Open `index.html` in any browser.
+            Single-file web wallet for Meowcoin (MEWC). Download `index.html` and open it in any browser.
             No installation, no server, no build step required.
-
-            ### Verify the release
-
-            ```sh
-            # Download the files
-            curl -LO https://github.com/meowcoin-foundation/apex-webwallet/releases/download/${{ steps.tag.outputs.tag }}/index.html
-            curl -LO https://github.com/meowcoin-foundation/apex-webwallet/releases/download/${{ steps.tag.outputs.tag }}/SHA256SUMS
-
-            # Verify checksum
-            sha256sum -c SHA256SUMS
-            ```
           files: |
             index.html
-            SHA256SUMS

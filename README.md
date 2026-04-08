@@ -12,6 +12,16 @@ If you were using the legacy Meowcoin Core wallet or Electrum, your funds are at
 
 ---
 
+## How to use
+
+1. Download `index.html` from the [Releases](../../releases) page.
+2. Open `index.html` in any modern browser (Chrome, Firefox, Safari, Edge).
+3. Enter your seed phrase or private key and open your wallet.
+
+No installation, no npm, no server required.
+
+---
+
 ## Difference from the legacy wallet
 
 | | Apex Wallet | Legacy Wallet |
@@ -28,19 +38,8 @@ If you were using the legacy Meowcoin Core wallet or Electrum, your funds are at
 - **Keys never leave your browser.** All cryptographic operations happen locally in JavaScript. No seed phrases, private keys, or derived keys are ever transmitted over the network.
 - **Nothing is stored.** No `localStorage`, `sessionStorage`, `IndexedDB`, or cookies are used. Your session ends when you close the tab or click Lock.
 - **Direct server connection.** Balance and transaction data is fetched directly from your configured electrs server. No proxy, no tracking.
+- **No external requests.** All dependencies are bundled directly into `index.html`. The file works with no internet connection once downloaded.
 - **Open source.** Every line of logic is in `index.html`. Read it.
-- **Signed releases.** Every release is GPG-signed. Verify before use (see below).
-
----
-
-## How to use
-
-1. Download `index.html` from the [Releases](../../releases) page.
-2. Verify the file (see below).
-3. Open `index.html` in any modern browser (Chrome, Firefox, Safari, Edge).
-4. Enter your seed phrase or private key and open your wallet.
-
-No installation, no npm, no server required.
 
 ---
 
@@ -52,22 +51,7 @@ To access your funds from Electrum in Apex Wallet:
 
 1. In Electrum: go to **Wallet → Private Keys → Export**
 2. Export the private key for your address
-3. In Apex Wallet: use the **Private Key** tab and paste the WIF key
-
----
-
-## Verifying a release
-
-Every release includes `SHA256SUMS` and `SHA256SUMS.asc`. Verify them before using:
-
-```sh
-# Download the release files
-curl -LO https://github.com/meowcoin-foundation/apex-webwallet/releases/latest/download/index.html
-curl -LO https://github.com/meowcoin-foundation/apex-webwallet/releases/latest/download/SHA256SUMS
-
-# Verify the checksum matches the file
-sha256sum -c SHA256SUMS
-```
+3. In Apex Wallet: use the **Private Key** tab and paste the WIF key (Meowcoin WIF keys start with **H**)
 
 ---
 
@@ -97,6 +81,12 @@ Each index produces a different address, all derived from the same seed phrase.
 
 ---
 
+## Fee rate
+
+The default fee rate is **0.011 MEWC/kB**, which is the minimum required for the legacy Meowcoin network to relay transactions. Raising it can speed up confirmation but 0.011 is sufficient under normal conditions.
+
+---
+
 ## What this wallet does NOT support
 
 - Electrum seed phrases (use private key import instead)
@@ -105,11 +95,12 @@ Each index produces a different address, all derived from the same seed phrase.
 - Multi-address gap scanning
 - Hardware wallets
 - Testnet
-- PWA / offline mode after first load
 
 ---
 
-## Dependencies (all via CDN)
+## Dependencies
+
+All dependencies are bundled directly into `index.html` — no CDN calls, no network requests for code.
 
 | Library | Version | Purpose |
 |---|---|---|
@@ -118,5 +109,3 @@ Each index produces a different address, all derived from the same seed phrase.
 | `@noble/secp256k1` | 1.7.1 | secp256k1 elliptic curve operations |
 | `@noble/hashes` | 1.3.3 | SHA256, RIPEMD160, HMAC |
 | `qrcode` | 1.5.3 | QR code generation for receive screen |
-
-All dependencies are loaded from `cdn.jsdelivr.net` with exact version pins. The `qrcode` script tag includes a SHA384 SRI integrity hash.
