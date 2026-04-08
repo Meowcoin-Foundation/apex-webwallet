@@ -50,12 +50,12 @@ To run your own electrs server, see [electrs-mewc](https://github.com/Meowcoin-F
 
 ## Accessing different address indices
 
-The default derivation path is `m/44'/175'/0'/0`. The last number is the address index.
+The default derivation path is `m/44'/1669'/0'/0`. The last number is the address index.
 
 To access a different address at the same account:
 
-- Change `m/44'/175'/0'/0` → `m/44'/175'/0'/1` for address index 1
-- Change `m/44'/175'/0'/0` → `m/44'/175'/0'/2` for address index 2
+- Change `m/44'/1669'/0'/0` → `m/44'/1669'/0'/1` for address index 1
+- Change `m/44'/1669'/0'/0` → `m/44'/1669'/0'/2` for address index 2
 - etc.
 
 Each index produces a different address, all derived from the same seed phrase.
