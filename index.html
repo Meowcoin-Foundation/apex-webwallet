@@ -700,9 +700,9 @@
 
       <div class="field-group">
         <label for="derivation-path">derivation path</label>
-        <input type="text" id="derivation-path" value="m/44'/1669'/0'/0"
+        <input type="text" id="derivation-path" value="m/44'/1669'/0'/0/0"
                autocomplete="off" spellcheck="false">
-        <p class="hint">index 0 by default — change the last number to access other addresses</p>
+        <p class="hint">change the last number to access other address indices (0, 1, 2…)</p>
       </div>
 
       <div class="error-box hidden" id="bip39-error"></div>
@@ -718,8 +718,8 @@
         <label for="privkey-input">private key (WIF)</label>
         <input type="text" id="privkey-input"
           autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-          placeholder="WIF format — starts with H">
-        <p class="hint">use this to import from any Meowcoin wallet including legacy Electrum</p>
+          placeholder="WIF (starts with H) or xprv">
+        <p class="hint">WIF private key, or an xprv from the legacy Meowcoin web wallet — derives address at m/44'/1669'/0'/0/0</p>
       </div>
 
       <div class="error-box hidden" id="privkey-error"></div>
@@ -3031,7 +3031,7 @@ const {
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const DEFAULT_SERVER       = 'https://electrs.mewccrypto.com';
-const DEFAULT_PATH         = "m/44'/1669'/0'/0";
+const DEFAULT_PATH         = "m/44'/1669'/0'/0/0";
 const EXPLORER_BASE        = 'https://explorer.mewccrypto.com';
 const MEWC_PUBKEY_HASH     = 0x32;   // Meowcoin P2PKH version byte → addresses start with M
 const MEWC_WIF_VERSION     = 0x70;
@@ -3179,6 +3179,19 @@ function wifToPrivateKey(wif) {
   if (payload.length !== 33 && payload.length !== 34)
     throw new Error('Invalid WIF length');
   return payload.slice(1, 33); // 32-byte private key
+}
+
+// ── xprv import ──────────────────────────────────────────────────────────────
+// The legacy Meowcoin web wallet exports the root master xprv (Bitcoin version
+// bytes 0x0488ADE4). We derive the first receiving address at the standard
+// BIP44 path so the imported address matches what the legacy wallet showed.
+function xprvToKeyPair(xprv) {
+  const root  = HDKey.fromExtendedKey(xprv.trim());
+  const child = root.derive(DEFAULT_PATH);
+  if (!child.privateKey) throw new Error('Could not derive key from xprv');
+  const privKey = child.privateKey;
+  const pubKey  = secp256k1.getPublicKey(privKey, true);
+  return { privKey, pubKey };
 }
 
 // ── Transaction building ─────────────────────────────────────────────────────
@@ -3476,11 +3489,14 @@ async function initWalletScreen() {
   const pathNote = document.getElementById('receive-path-note');
   if (state.importMethod === 'bip39') {
     pathNote.textContent =
-      `This address is derived from your seed phrase at path ${state.derivationPath}. ` +
-      `To use a different address, adjust the derivation path index on the login screen.`;
+      `Derived from your seed phrase at ${state.derivationPath}. ` +
+      `Change the last number on the login screen to access other addresses.`;
+  } else if (state.importMethod === 'xprv') {
+    pathNote.textContent =
+      `Derived from your xprv at ${state.derivationPath}.`;
   } else {
     pathNote.textContent =
-      `This address is derived from your imported private key.`;
+      `Derived from your imported private key.`;
   }
 
   // Generate QR code
@@ -3591,21 +3607,30 @@ document.getElementById('btn-open-bip39').addEventListener('click', async () => 
   }
 });
 
-// Open wallet from WIF
+// Open wallet from WIF or xprv
 document.getElementById('btn-open-privkey').addEventListener('click', async () => {
   hideError('privkey-error');
-  const wif = document.getElementById('privkey-input').value.trim();
+  const input = document.getElementById('privkey-input').value.trim();
   state.serverUrl = document.getElementById('server-url').value.trim() || DEFAULT_SERVER;
 
-  if (!wif) return showError('privkey-error', 'Please enter a WIF private key.');
+  if (!input) return showError('privkey-error', 'Please enter a WIF private key or xprv.');
 
   try {
-    const privKey = wifToPrivateKey(wif);
-    const pubKey  = secp256k1.getPublicKey(privKey, true);
+    let privKey, pubKey, importMethod;
 
-    state.keyPair      = { privKey, pubKey };
-    state.address      = pubkeyToAddress(pubKey);
-    state.importMethod = 'wif';
+    if (input.startsWith('xprv')) {
+      ({ privKey, pubKey } = xprvToKeyPair(input));
+      importMethod = 'xprv';
+    } else {
+      privKey = wifToPrivateKey(input);
+      pubKey  = secp256k1.getPublicKey(privKey, true);
+      importMethod = 'wif';
+    }
+
+    state.keyPair        = { privKey, pubKey };
+    state.address        = pubkeyToAddress(pubKey);
+    state.derivationPath = importMethod === 'xprv' ? DEFAULT_PATH : null;
+    state.importMethod   = importMethod;
 
     await initWalletScreen();
   } catch (e) {

@@ -28,11 +28,18 @@ No installation, no npm, no server required.
 
 Electrum uses its own non-BIP39 seed phrase format. **You cannot use your Electrum seed words in Apex Wallet.**
 
-To access your funds from Electrum in Apex Wallet:
+To access your funds from the legacy Meowcoin web wallet in Apex Wallet, you have two options:
 
+**Option A — seed phrase (recommended)**
+1. Enter your seed phrase in the BIP39 tab — the derivation path `m/44'/1669'/0'/0/0` is already the correct default
+
+**Option B — xprv backup key**
+1. In the legacy wallet: export your backup key (it starts with `xprv`)
+2. In Apex Wallet: paste it into the **Private Key** tab — Apex will derive the address automatically at the correct path
+
+**Option C — Electrum WIF export**
 1. In Electrum: go to **Wallet → Private Keys → Export**
-2. Export the private key for your address
-3. In Apex Wallet: use the **Private Key** tab and paste the WIF key (Meowcoin WIF keys start with **H**)
+2. In Apex Wallet: paste the WIF key into the **Private Key** tab (Meowcoin WIF keys start with **H**)
 
 ---
 
@@ -50,12 +57,12 @@ To run your own electrs server, see [electrs-mewc](https://github.com/Meowcoin-F
 
 ## Accessing different address indices
 
-The default derivation path is `m/44'/1669'/0'/0`. The last number is the address index.
+The default derivation path is `m/44'/1669'/0'/0/0`. The last number is the address index.
 
 To access a different address at the same account:
 
-- Change `m/44'/1669'/0'/0` → `m/44'/1669'/0'/1` for address index 1
-- Change `m/44'/1669'/0'/0` → `m/44'/1669'/0'/2` for address index 2
+- Change `m/44'/1669'/0'/0/0` → `m/44'/1669'/0'/0/1` for address index 1
+- Change `m/44'/1669'/0'/0/0` → `m/44'/1669'/0'/0/2` for address index 2
 - etc.
 
 Each index produces a different address, all derived from the same seed phrase.
