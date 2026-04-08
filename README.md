@@ -63,7 +63,7 @@ The default server is `https://electrs.mewccrypto.com`. To use a different serve
 2. Enter the URL of your server (e.g., `https://your-node.example.com`).
 3. The wallet connects to that server for all balance, UTXO, and broadcast operations.
 
-To run your own electrs server, see the [electrs documentation](https://github.com/romanz/electrs).
+To run your own electrs server, see [electrs-mewc](https://github.com/Meowcoin-Foundation/electrs-mewc).
 
 ---
 
