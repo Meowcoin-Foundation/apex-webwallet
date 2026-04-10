@@ -151,6 +151,22 @@
       margin-top: 5px;
     }
 
+    .advanced-toggle {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 12px;
+      cursor: pointer;
+      padding: 0;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .advanced-toggle:hover { color: var(--text); }
+    .advanced-section { display: none; }
+    .advanced-section.open { display: block; }
+
     .word-count {
       font-size: 12px;
       color: var(--muted);
@@ -698,11 +714,23 @@
         <p class="word-count" id="word-count">0 words</p>
       </div>
 
-      <div class="field-group">
-        <label for="derivation-path">derivation path</label>
-        <input type="text" id="derivation-path" value="m/44'/1669'/0'/0/0"
-               autocomplete="off" spellcheck="false">
-        <p class="hint">change the last number to access other address indices (0, 1, 2…)</p>
+      <button type="button" class="advanced-toggle" id="btn-advanced-toggle" onclick="toggleAdvanced()">
+        <span id="advanced-arrow">▶</span> Advanced
+      </button>
+      <div class="advanced-section" id="advanced-section">
+        <div class="field-group">
+          <label for="bip39-passphrase">passphrase <span style="font-weight:400;color:var(--muted)">(optional — only if you set one)</span></label>
+          <input type="password" id="bip39-passphrase"
+            autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+            placeholder="leave blank if you never set one">
+          <p class="hint">if your legacy wallet had a password / advanced passphrase, enter it here — wrong passphrase silently derives the wrong address</p>
+        </div>
+        <div class="field-group">
+          <label for="derivation-path">derivation path</label>
+          <input type="text" id="derivation-path" value="m/44'/1669'/0'/0/0"
+                 autocomplete="off" spellcheck="false">
+          <p class="hint">change the last number to access other address indices (0, 1, 2…)</p>
+        </div>
       </div>
 
       <div class="error-box hidden" id="bip39-error"></div>
@@ -3420,6 +3448,13 @@ async function copyText(text, label = 'Copied!') {
   }
 }
 
+function toggleAdvanced() {
+  const section = document.getElementById('advanced-section');
+  const arrow   = document.getElementById('advanced-arrow');
+  const open    = section.classList.toggle('open');
+  arrow.textContent = open ? '▼' : '▶';
+}
+
 function switchLoginTab(tab) {
   ['bip39', 'privkey'].forEach(t => {
     document.getElementById(`login-tab-${t}`).classList.toggle('active', t === tab);
@@ -3535,10 +3570,11 @@ function lockWallet() {
     balance: null, utxos: [], derivationPath: null, importMethod: null, builtTx: null
   };
   // Reset forms
-  document.getElementById('mnemonic-input').value = '';
-  document.getElementById('privkey-input').value  = '';
+  document.getElementById('mnemonic-input').value   = '';
+  document.getElementById('bip39-passphrase').value = '';
+  document.getElementById('privkey-input').value    = '';
   document.getElementById('word-count').textContent = '0 words';
-  document.getElementById('word-count').className = 'word-count';
+  document.getElementById('word-count').className   = 'word-count';
   hideError('bip39-error');
   hideError('privkey-error');
 
@@ -3588,7 +3624,8 @@ document.getElementById('btn-open-bip39').addEventListener('click', async () => 
     return showError('bip39-error', 'Invalid derivation path. Must start with m/');
 
   try {
-    const seed  = mnemonicToSeedSync(mnemonic);
+    const passphrase = document.getElementById('bip39-passphrase').value;
+    const seed  = mnemonicToSeedSync(mnemonic, passphrase);
     const root  = HDKey.fromMasterSeed(seed);
     const child = root.derive(path);
     if (!child.privateKey) throw new Error('Could not derive key at this path');
