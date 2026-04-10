@@ -3034,7 +3034,7 @@ const DEFAULT_SERVER       = 'https://electrs.mewccrypto.com';
 const DEFAULT_PATH         = "m/44'/1669'/0'/0/0";
 const EXPLORER_BASE        = 'https://explorer.mewccrypto.com';
 const MEWC_PUBKEY_HASH     = 0x32;   // Meowcoin P2PKH version byte → addresses start with M
-const MEWC_WIF_VERSION     = 0x80;
+const MEWC_WIF_VERSION     = 0x70;
 const DUST_LIMIT           = 546;    // satoshis
 const BASE58_ALPHABET      = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 
@@ -3173,7 +3173,7 @@ function decodeAddress(address) {
 function wifToPrivateKey(wif) {
   const payload = base58CheckDecode(wif.trim());
   if (payload[0] !== MEWC_WIF_VERSION)
-    throw new Error(`Invalid WIF version byte: expected 0x70, got 0x${payload[0].toString(16)}`);
+    throw new Error(`Invalid WIF version byte: expected 0x${MEWC_WIF_VERSION.toString(16)}, got 0x${payload[0].toString(16)}`);
   if (payload.length === 34 && payload[33] !== 0x01)
     throw new Error('Invalid WIF: unexpected compression flag');
   if (payload.length !== 33 && payload.length !== 34)
