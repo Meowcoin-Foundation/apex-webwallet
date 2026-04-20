@@ -690,9 +690,15 @@
 
     <!-- Server config -->
     <div class="field-group">
-      <label for="server-url">electrs server</label>
+      <label for="server-select">electrs server</label>
+      <select id="server-select" onchange="onServerSelectChange()">
+        <option value="https://electrs.mewccrypto.com">electrs.mewccrypto.com</option>
+        <option value="https://electrs2.mewccrypto.com">electrs2.mewccrypto.com</option>
+        <option value="custom">custom…</option>
+      </select>
       <input type="url" id="server-url" value="https://electrs.mewccrypto.com"
-             autocomplete="off" spellcheck="false">
+             autocomplete="off" spellcheck="false" style="display:none;margin-top:6px"
+             placeholder="https://your-electrs-server.com">
       <p class="hint">your wallet connects directly to this server — no middleman</p>
     </div>
 
@@ -3395,6 +3401,23 @@ async function fetchHistory() {
   return txs.slice(0, 50);
 }
 
+function getServerUrl() {
+  const sel = document.getElementById('server-select');
+  if (sel && sel.value !== 'custom') return sel.value;
+  return document.getElementById('server-url')?.value.trim() || DEFAULT_SERVER;
+}
+
+function onServerSelectChange() {
+  const sel = document.getElementById('server-select');
+  const input = document.getElementById('server-url');
+  if (sel.value === 'custom') {
+    input.style.display = 'block';
+    input.focus();
+  } else {
+    input.style.display = 'none';
+  }
+}
+
 async function checkServerHealth() {
   try {
     await apiFetch('/blocks/tip/height');
@@ -3566,7 +3589,7 @@ function lockWallet() {
   // Clear all sensitive state
   state = {
     keyPair: null, address: null,
-    serverUrl: document.getElementById('server-url')?.value || DEFAULT_SERVER,
+    serverUrl: getServerUrl(),
     balance: null, utxos: [], derivationPath: null, importMethod: null, builtTx: null
   };
   // Reset forms
@@ -3615,7 +3638,7 @@ document.getElementById('btn-open-bip39').addEventListener('click', async () => 
   hideError('bip39-error');
   const mnemonic = document.getElementById('mnemonic-input').value.trim().toLowerCase().replace(/\s+/g, ' ');
   const path     = document.getElementById('derivation-path').value.trim();
-  state.serverUrl = document.getElementById('server-url').value.trim() || DEFAULT_SERVER;
+  state.serverUrl = getServerUrl();
 
   if (!mnemonic) return showError('bip39-error', 'Please enter your seed phrase.');
   if (!validateMnemonic(mnemonic, englishWordlist))
@@ -3648,7 +3671,7 @@ document.getElementById('btn-open-bip39').addEventListener('click', async () => 
 document.getElementById('btn-open-privkey').addEventListener('click', async () => {
   hideError('privkey-error');
   const input = document.getElementById('privkey-input').value.trim();
-  state.serverUrl = document.getElementById('server-url').value.trim() || DEFAULT_SERVER;
+  state.serverUrl = getServerUrl();
 
   if (!input) return showError('privkey-error', 'Please enter a WIF private key or xprv.');
 
