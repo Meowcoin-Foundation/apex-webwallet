@@ -644,6 +644,28 @@
       font-weight: 700;
       margin-bottom: 16px;
     }
+    .phrase-length-toggle {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    .phrase-len-btn {
+      flex: 1;
+      padding: 6px 0;
+      font-size: 13px;
+      font-weight: 600;
+      background: var(--surface);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+    .phrase-len-btn.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
 
     /* ── Utility ── */
     .hidden { display: none !important; }
@@ -804,6 +826,10 @@
       ⚠ Write these words down in order on paper. Do not screenshot or store digitally
       unless in an encrypted password manager. Anyone with these words has full access
       to your funds.
+    </div>
+    <div class="phrase-length-toggle">
+      <button class="phrase-len-btn" id="btn-len-12">12 words</button>
+      <button class="phrase-len-btn active" id="btn-len-24">24 words</button>
     </div>
     <div class="words-grid" id="words-grid"></div>
     <label class="checkbox-label">
@@ -3841,17 +3867,36 @@ document.getElementById('btn-open-privkey').addEventListener('click', async () =
 
 // Generate new wallet
 let generatedMnemonic = null;
-document.getElementById('btn-generate').addEventListener('click', () => {
-  generatedMnemonic = generateMnemonic(englishWordlist, 128); // 12 words
+let generateEntropyBits = 256; // 24 words by default
+
+function renderGeneratedMnemonic() {
+  generatedMnemonic = generateMnemonic(englishWordlist, generateEntropyBits);
   const words = generatedMnemonic.split(' ');
   const grid  = document.getElementById('words-grid');
   grid.innerHTML = words.map((w, i) =>
     `<div class="word-cell"><span class="word-num">${i + 1}</span><span class="word-text">${w}</span></div>`
   ).join('');
-
   document.getElementById('backup-confirm').checked = false;
   document.getElementById('btn-continue-generate').disabled = true;
+}
+
+document.getElementById('btn-generate').addEventListener('click', () => {
+  renderGeneratedMnemonic();
   showScreen('generate');
+});
+
+document.getElementById('btn-len-12').addEventListener('click', () => {
+  generateEntropyBits = 128;
+  document.getElementById('btn-len-12').classList.add('active');
+  document.getElementById('btn-len-24').classList.remove('active');
+  renderGeneratedMnemonic();
+});
+
+document.getElementById('btn-len-24').addEventListener('click', () => {
+  generateEntropyBits = 256;
+  document.getElementById('btn-len-24').classList.add('active');
+  document.getElementById('btn-len-12').classList.remove('active');
+  renderGeneratedMnemonic();
 });
 
 document.getElementById('backup-confirm').addEventListener('change', function () {
@@ -3863,7 +3908,8 @@ document.getElementById('btn-continue-generate').addEventListener('click', () =>
   document.getElementById('mnemonic-input').value = generatedMnemonic;
   // Update word count
   const wc = document.getElementById('word-count');
-  wc.textContent = '12 words';
+  const wcNum = generatedMnemonic.split(' ').length;
+  wc.textContent = `${wcNum} words`;
   wc.className   = 'word-count valid';
   showScreen('login');
   switchLoginTab('bip39');
