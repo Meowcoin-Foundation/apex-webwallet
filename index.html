@@ -3963,6 +3963,8 @@ document.getElementById('btn-build-tx').addEventListener('click', () => {
   hideError('send-error');
   document.getElementById('tx-preview').classList.add('hidden');
   document.getElementById('tx-success').classList.add('hidden');
+  document.getElementById('btn-broadcast').classList.remove('hidden');
+  document.getElementById('btn-broadcast').textContent = 'Broadcast transaction';
 
   const toAddr   = document.getElementById('send-to').value.trim();
   const amtStr   = document.getElementById('send-amount').value;
