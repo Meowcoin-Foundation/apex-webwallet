@@ -776,9 +776,9 @@
         </div>
         <div class="field-group">
           <label for="gap-limit">gap limit</label>
-          <input type="number" id="gap-limit" value="400" min="1" max="2000"
+          <input type="number" id="gap-limit" value="50" min="1" max="2000"
                  autocomplete="off">
-          <p class="hint">number of consecutive empty addresses before stopping scan — 400 covers virtually all real wallets</p>
+          <p class="hint">number of consecutive empty addresses before stopping scan — 50 is enough for most wallets; raise if you have many unused addresses</p>
         </div>
       </div>
 
@@ -962,14 +962,16 @@
         </div>
       </div>
       <button class="btn btn-primary" id="btn-broadcast">Broadcast transaction</button>
-      <div class="hidden" id="tx-success">
-        <div class="mt-3 success-box">
-          <p class="success-text">✓ Transaction broadcast successfully</p>
-          <div class="txid-display">
-            txid: <a id="success-txid-link" href="#" target="_blank" rel="noopener noreferrer"></a>
-          </div>
-          <button class="btn btn-secondary mt-2" id="btn-send-another">Send another</button>
+    </div>
+
+    <!-- Broadcast success (hidden until broadcast) -->
+    <div class="card hidden" id="tx-success">
+      <div class="success-box">
+        <p class="success-text">✓ Transaction broadcast successfully</p>
+        <div class="txid-display">
+          txid: <a id="success-txid-link" href="#" target="_blank" rel="noopener noreferrer"></a>
         </div>
+        <button class="btn btn-secondary mt-2" id="btn-send-another">Send another</button>
       </div>
     </div>
   </div>
@@ -3121,7 +3123,7 @@ const MEWC_PUBKEY_HASH     = 0x32;   // Meowcoin P2PKH version byte → addresse
 const MEWC_WIF_VERSION     = 0x70;
 const DUST_LIMIT           = 546;    // satoshis
 const BASE58_ALPHABET      = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-const DEFAULT_GAP_LIMIT    = 400;
+const DEFAULT_GAP_LIMIT    = 50;
 
 // ── Application state ────────────────────────────────────────────────────────
 let state = {
@@ -3963,8 +3965,6 @@ document.getElementById('btn-build-tx').addEventListener('click', () => {
   hideError('send-error');
   document.getElementById('tx-preview').classList.add('hidden');
   document.getElementById('tx-success').classList.add('hidden');
-  document.getElementById('btn-broadcast').classList.remove('hidden');
-  document.getElementById('btn-broadcast').textContent = 'Broadcast transaction';
 
   const toAddr   = document.getElementById('send-to').value.trim();
   const amtStr   = document.getElementById('send-amount').value;
@@ -4021,8 +4021,8 @@ document.getElementById('btn-broadcast').addEventListener('click', async () => {
     link.textContent = txid;
     link.href = `${EXPLORER_BASE}/tx/${txid}`;
 
+    document.getElementById('tx-preview').classList.add('hidden');
     document.getElementById('tx-success').classList.remove('hidden');
-    btn.classList.add('hidden');
 
     // Refresh balance after broadcast
     setTimeout(async () => {
@@ -4037,10 +4037,8 @@ document.getElementById('btn-broadcast').addEventListener('click', async () => {
     btn.textContent = 'Broadcast transaction';
     btn.classList.remove('loading');
   } finally {
-    if (!btn.classList.contains('hidden')) {
-      btn.textContent = 'Broadcast transaction';
-      btn.classList.remove('loading');
-    }
+    btn.textContent = 'Broadcast transaction';
+    btn.classList.remove('loading');
   }
 });
 
@@ -4050,8 +4048,6 @@ document.getElementById('btn-send-another').addEventListener('click', () => {
   document.getElementById('send-amount').value = '';
   document.getElementById('tx-preview').classList.add('hidden');
   document.getElementById('tx-success').classList.add('hidden');
-  document.getElementById('btn-broadcast').classList.remove('hidden');
-  document.getElementById('btn-broadcast').textContent = 'Broadcast transaction';
   hideError('send-error');
   state.builtTx = null;
 });
